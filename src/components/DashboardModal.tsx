@@ -11,8 +11,7 @@ import {
   MessageCircle, 
   CheckCircle2, 
   Sliders, 
-  LogOut, 
-  Layers
+  LogOut
 } from 'lucide-react';
 import { useStore } from '../context/useStore';
 
