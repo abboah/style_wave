@@ -27,7 +27,7 @@ const ProductModalContent: React.FC<ProductModalContentProps> = ({ product, onCl
 
   return (
     <div 
-      className="modal-content" 
+      className="modal-content product-modal" 
       onClick={(e) => e.stopPropagation()} 
       style={{ maxWidth: '850px', padding: 0, overflow: 'hidden' }}
     >
@@ -55,7 +55,7 @@ const ProductModalContent: React.FC<ProductModalContentProps> = ({ product, onCl
         <X size={18} />
       </button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      <div className="product-modal-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
         
         {/* Image Gallery Column */}
         <div style={{ background: '#0e1118', display: 'flex', flexDirection: 'column' }}>
@@ -98,7 +98,7 @@ const ProductModalContent: React.FC<ProductModalContentProps> = ({ product, onCl
         </div>
 
         {/* Details & Actions Column */}
-        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="product-modal-details" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           
           <div>
             {/* Badges */}

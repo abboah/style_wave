@@ -37,7 +37,7 @@ export const ProductGrid: React.FC = () => {
         {/* Filter Navigation Bar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2.5rem' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="catalog-heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h2 className="font-brand" style={{ fontSize: '1.65rem', fontWeight: 900, color: '#090d16' }}>
                 CURRENT DROPS
@@ -49,7 +49,7 @@ export const ProductGrid: React.FC = () => {
             </div>
 
             {/* Source Segmented Control */}
-            <div style={{ 
+            <div className="catalog-source-tabs" style={{ 
               display: 'inline-flex', 
               background: '#f8fafc', 
               padding: '0.3rem', 
@@ -119,7 +119,7 @@ export const ProductGrid: React.FC = () => {
           </div>
 
           {/* Sub Filters: Category Pills & Sort dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+          <div className="catalog-filters" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
             
             {/* Category Pills */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
@@ -155,7 +155,7 @@ export const ProductGrid: React.FC = () => {
 
         {/* Product Grid */}
         {filteredProducts.length > 0 ? (
-          <div style={{ 
+          <div className="product-grid" style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
             gap: '1.5rem' 

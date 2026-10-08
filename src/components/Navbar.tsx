@@ -29,7 +29,7 @@ export const Navbar: React.FC = () => {
   const [showSearchInput, setShowSearchInput] = useState(false);
 
   return (
-    <header style={{ 
+    <header className="site-header" style={{ 
       position: 'sticky', 
       top: 0, 
       zIndex: 100, 
@@ -38,7 +38,7 @@ export const Navbar: React.FC = () => {
       borderBottom: '1px solid var(--border-medium)' 
     }}>
       {/* Minimal Top Notification Bar */}
-      <div style={{ 
+      <div className="site-notice" style={{ 
         background: '#f8fafc', 
         borderBottom: '1px solid var(--border-subtle)',
         padding: '0.35rem 1rem', 
@@ -62,10 +62,10 @@ export const Navbar: React.FC = () => {
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.25rem', gap: '1rem' }}>
+      <div className="site-nav container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.25rem', gap: '1rem' }}>
         
         {/* Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
+        <div className="site-brand-group" style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
           <a 
             href="#" 
             onClick={(e) => { e.preventDefault(); setActiveType('all'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -96,7 +96,7 @@ export const Navbar: React.FC = () => {
           </a>
 
           {/* Quick Collection Switcher */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <nav className="collection-nav" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <button 
               className={`pill-tab ${activeType === 'all' ? 'active' : ''}`}
               onClick={() => setActiveType('all')}
@@ -122,7 +122,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="site-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           
           {/* Search Bar */}
           {showSearchInput ? (

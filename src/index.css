@@ -517,3 +517,217 @@ textarea.input-field {
   border-color: #fecdd3;
   color: #e11d48;
 }
+
+@media (max-width: 700px) {
+  .site-notice {
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    padding-inline: 0.75rem !important;
+  }
+
+  .site-notice::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-nav {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .site-brand-group,
+  .site-actions {
+    width: 100%;
+  }
+
+  .site-brand-group {
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 0.75rem !important;
+  }
+
+  .site-brand-group > a {
+    min-width: 0;
+  }
+
+  .site-brand-group > a > div:last-child {
+    min-width: 0;
+  }
+
+  .site-brand-group > a .font-brand {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.05rem !important;
+  }
+
+  .collection-nav {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    scrollbar-width: none;
+  }
+
+  .collection-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-actions {
+    justify-content: space-between;
+    gap: 0.25rem !important;
+  }
+
+  .site-actions > .btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .site-actions > .btn span {
+    display: none;
+  }
+
+  .site-actions > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .site-actions input {
+    width: 100% !important;
+  }
+
+  .catalog-heading,
+  .catalog-filters {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .catalog-source-tabs {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: stretch;
+  }
+
+  .catalog-source-tabs button {
+    flex: 1 0 auto;
+    min-height: 2.5rem;
+  }
+
+  .catalog-filters > div:first-child {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .catalog-filters > div:first-child::-webkit-scrollbar {
+    display: none;
+  }
+
+  .catalog-filters select {
+    width: 100% !important;
+  }
+
+  .catalog-filters > div:last-child {
+    width: 100%;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  .product-card > div:last-child {
+    padding: 0.75rem !important;
+  }
+
+  .product-card > div:last-child > div:first-child > div {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .product-card h3 {
+    font-size: 0.82rem !important;
+    overflow-wrap: anywhere;
+  }
+
+  .product-card .font-brand {
+    font-size: 0.9rem !important;
+  }
+
+  .product-card-overlay {
+    opacity: 1;
+    padding: 0.5rem;
+    pointer-events: none;
+  }
+
+  .product-card-overlay button {
+    pointer-events: auto;
+    min-height: 2.25rem;
+  }
+
+  .product-modal {
+    max-height: calc(100vh - 1rem) !important;
+    border-radius: var(--radius-md);
+    overflow-y: auto !important;
+  }
+
+  .product-modal-layout {
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  .product-modal-layout > div:first-child {
+    flex: none;
+  }
+
+  .product-modal-layout > div:first-child > div:first-child {
+    height: min(72vw, 330px) !important;
+  }
+
+  .product-modal-details {
+    padding: 1.25rem !important;
+    gap: 1rem;
+  }
+
+  .product-modal-details h2 {
+    font-size: 1.35rem !important;
+    overflow-wrap: anywhere;
+  }
+
+  .product-modal-details .text-gradient-cyan {
+    font-size: 1.45rem !important;
+  }
+
+  .product-modal-details p {
+    font-size: 0.84rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .product-modal-details > div:first-child > div:nth-child(4) > div:first-child {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .product-modal-details > div:first-child > div:nth-child(4) > div:first-child > span {
+    align-self: flex-start;
+  }
+
+  .product-modal-details table,
+  .product-modal-details [style*="grid-template-columns"] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .product-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .product-card-overlay {
+    display: none;
+  }
+}
