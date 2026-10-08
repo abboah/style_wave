@@ -11,7 +11,8 @@ import {
   MessageCircle, 
   CheckCircle2, 
   Sliders, 
-  LogOut
+  LogOut,
+  Trash2
 } from 'lucide-react';
 import { useStore } from '../context/useStore';
 
@@ -28,7 +29,8 @@ export const DashboardModal: React.FC = () => {
     setIsPostModalOpen,
     setIsSettingsModalOpen,
     logoutOwner,
-    updateOrderStatus
+    updateOrderStatus,
+    deleteProduct
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'inventory'>('overview');
@@ -437,9 +439,24 @@ export const DashboardModal: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className={`badge ${p.isSoldOut ? 'badge-sold' : 'badge-subtle'}`}>
-                    {p.isSoldOut ? 'Sold Out' : 'Active'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className={`badge ${p.isSoldOut ? 'badge-sold' : 'badge-subtle'}`}>
+                      {p.isSoldOut ? 'Sold Out' : 'Active'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove "${p.title}" from store?`)) {
+                          deleteProduct(p.id);
+                        }
+                      }}
+                      className="btn btn-ghost btn-sm"
+                      title={`Delete ${p.title}`}
+                      aria-label={`Delete ${p.title}`}
+                      style={{ padding: '0.35rem', color: '#e11d48' }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
