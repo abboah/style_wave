@@ -1,4 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+  increment,
+  writeBatch
+} from 'firebase/firestore';
 import type { 
   Product, 
   CartItem, 
@@ -10,6 +23,7 @@ import type {
 } from '../types';
 import { INITIAL_PRODUCTS } from '../data/initialProducts';
 import { StoreContext } from './storeContextInstance';
+import { auth, db } from '../lib/firebase';
 
 const DEFAULT_CONFIG: MerchantConfig = {
   brandName: 'STYLE WAVE',
@@ -20,14 +34,13 @@ const DEFAULT_CONFIG: MerchantConfig = {
   yebeckUrl: 'https://yebeck.com',
   yebeckMerchantId: 'stylewave',
   phoneWhatsApp: '+233 55 000 0000',
-  instagram: '@stylewave.gh',
-  adminPasscode: 'wave2026'
+  instagram: '@stylewave.gh'
 };
 
 const DEFAULT_ANALYTICS: StoreAnalytics = {
-  totalVisits: 168,
-  uniqueVisitors: 114,
-  lastVisitDate: new Date().toISOString()
+  totalVisits: 0,
+  uniqueVisitors: 0,
+  lastVisitDate: ''
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -105,6 +118,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return false;
     }
   });
+  const [authSessionReady, setAuthSessionReady] = useState(false);
 
   // Modals & Panels
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -122,18 +136,82 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
 
-  // Increment visit counter on session mount
+  // Restore creator authentication from Firebase.
   useEffect(() => {
-    const hasVisited = sessionStorage.getItem('stylewave_session_visited');
-    if (!hasVisited) {
-      sessionStorage.setItem('stylewave_session_visited', 'true');
-      setAnalytics(prev => ({
-        totalVisits: prev.totalVisits + 1,
-        uniqueVisitors: prev.uniqueVisitors + 1,
-        lastVisitDate: new Date().toISOString()
-      }));
-    }
+    return onAuthStateChanged(auth, user => {
+      const isCreator = Boolean(user && user.providerData.some(provider => provider.providerId === 'password'));
+      setIsOwnerAuthenticated(isCreator);
+      setAuthSessionReady(true);
+      if (isCreator) {
+        sessionStorage.setItem('stylewave_owner_auth', 'true');
+      } else {
+        sessionStorage.removeItem('stylewave_owner_auth');
+      }
+      if (!user) {
+        signInAnonymously(auth).catch(error => console.error('Failed to start visitor analytics session', error));
+      }
+    });
   }, []);
+
+  // Subscribe to shared store data. Local state remains as a fallback while Firebase loads.
+  useEffect(() => {
+    const unsubscribeProducts = onSnapshot(collection(db, 'products'), snapshot => {
+      if (!snapshot.empty) {
+        setProducts(snapshot.docs.map(item => item.data() as Product));
+      }
+    }, error => console.error('Failed to subscribe to products', error));
+    const unsubscribeConfig = onSnapshot(doc(db, 'store', 'config'), snapshot => {
+      if (snapshot.exists()) setMerchantConfig(prev => ({ ...prev, ...snapshot.data() } as MerchantConfig));
+    }, error => console.error('Failed to subscribe to store configuration', error));
+
+    return () => {
+      unsubscribeProducts();
+      unsubscribeConfig();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOwnerAuthenticated) return;
+
+    const unsubscribeOrders = onSnapshot(collection(db, 'orders'), snapshot => {
+      setOrders(snapshot.docs.map(item => item.data() as PlacedOrder).sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ));
+    }, error => console.error('Failed to subscribe to orders', error));
+    const unsubscribeAnalytics = onSnapshot(doc(db, 'analytics', 'store'), snapshot => {
+      if (snapshot.exists()) setAnalytics(snapshot.data() as StoreAnalytics);
+    }, error => console.error('Failed to subscribe to analytics', error));
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeAnalytics();
+    };
+  }, [isOwnerAuthenticated]);
+
+  // Record live visit metrics through an anonymous Firebase session.
+  useEffect(() => {
+    const visitor = auth.currentUser;
+    if (!visitor || visitor.providerData.length > 0) return;
+
+    const sessionVisitKey = `stylewave_session_visited_${visitor.uid}`;
+    const uniqueVisitKey = `stylewave_unique_visitor_${visitor.uid}`;
+    const isNewSession = !sessionStorage.getItem(sessionVisitKey);
+    if (!isNewSession) return;
+
+    sessionStorage.setItem(sessionVisitKey, 'true');
+    const isNewVisitor = !localStorage.getItem(uniqueVisitKey);
+    if (isNewVisitor) localStorage.setItem(uniqueVisitKey, 'true');
+
+    setDoc(doc(db, 'analytics', 'store'), {
+        totalVisits: increment(1),
+        uniqueVisitors: increment(isNewVisitor ? 1 : 0),
+        lastVisitDate: new Date().toISOString()
+      }, { merge: true }).catch(error => {
+      sessionStorage.removeItem(sessionVisitKey);
+      if (isNewVisitor) localStorage.removeItem(uniqueVisitKey);
+      console.error('Failed to record visit analytics', error);
+    });
+  }, [authSessionReady]);
 
   // Sync to LocalStorage
   useEffect(() => {
@@ -185,31 +263,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [analytics]);
 
   // Auth methods
-  const loginOwner = (passcode: string): boolean => {
-    if (passcode.trim() === merchantConfig.adminPasscode.trim()) {
-      setIsOwnerAuthenticated(true);
-      try {
-        sessionStorage.setItem('stylewave_owner_auth', 'true');
-      } catch {}
-      setIsAuthModalOpen(false);
-
-      // Execute pending action if any
-      if (pendingProtectedAction === 'post') {
-        setIsPostModalOpen(true);
-      } else if (pendingProtectedAction === 'dashboard') {
-        setIsDashboardOpen(true);
+  const loginOwner = async (email: string, password: string): Promise<boolean> => {
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      const productSnapshot = await getDocs(collection(db, 'products'));
+      if (productSnapshot.empty) {
+        const batch = writeBatch(db);
+        products.forEach(product => batch.set(doc(db, 'products', product.id), product));
+        await batch.commit();
       }
+      const configSnapshot = await getDoc(doc(db, 'store', 'config'));
+      if (!configSnapshot.exists()) await setDoc(doc(db, 'store', 'config'), merchantConfig);
+      const analyticsSnapshot = await getDoc(doc(db, 'analytics', 'store'));
+      if (!analyticsSnapshot.exists()) await setDoc(doc(db, 'analytics', 'store'), analytics);
+      setIsAuthModalOpen(false);
+      if (pendingProtectedAction === 'post') setIsPostModalOpen(true);
+      if (pendingProtectedAction === 'dashboard') setIsDashboardOpen(true);
       setPendingProtectedAction(null);
       return true;
+    } catch (error) {
+      console.error('Creator sign-in failed', error);
+      return false;
     }
-    return false;
   };
 
   const logoutOwner = () => {
-    setIsOwnerAuthenticated(false);
-    try {
-      sessionStorage.removeItem('stylewave_owner_auth');
-    } catch {}
+    signOut(auth).catch(error => console.error('Creator sign-out failed', error));
     setIsPostModalOpen(false);
     setIsDashboardOpen(false);
   };
@@ -242,6 +321,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return p;
       }));
 
+      updateDoc(doc(db, 'products', productId), {
+        savesCount: increment(isSaved ? -1 : 1)
+      }).catch(error => console.error('Failed to sync wishlist count', error));
+
       return next;
     });
   };
@@ -259,39 +342,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdAt: new Date().toISOString()
     };
     setProducts(prev => [product, ...prev]);
+    setDoc(doc(db, 'products', product.id), product)
+      .catch(error => console.error('Failed to save product', error));
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    updateDoc(doc(db, 'products', id), updates)
+      .catch(error => console.error('Failed to update product', error));
   };
 
   const deleteProduct = (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
     setCart(prev => prev.filter(item => item.product.id !== id));
+    deleteDoc(doc(db, 'products', id))
+      .catch(error => console.error('Failed to delete product', error));
   };
 
   const toggleSoldOut = (id: string) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, isSoldOut: !p.isSoldOut } : p));
+    const product = products.find(item => item.id === id);
+    if (product) {
+      updateDoc(doc(db, 'products', id), { isSoldOut: !product.isSoldOut })
+        .catch(error => console.error('Failed to update product availability', error));
+    }
   };
 
   const resetProducts = () => {
     setProducts(INITIAL_PRODUCTS);
+    const batch = writeBatch(db);
+    INITIAL_PRODUCTS.forEach(product => batch.set(doc(db, 'products', product.id), product));
+    batch.commit().catch(error => console.error('Failed to reset products', error));
   };
 
   const updateMerchantConfig = (config: Partial<MerchantConfig>) => {
     setMerchantConfig(prev => ({ ...prev, ...config }));
+    setDoc(doc(db, 'store', 'config'), config, { merge: true })
+      .catch(error => console.error('Failed to save store configuration', error));
   };
 
   const addOrder = (order: PlacedOrder) => {
     setOrders(prev => [order, ...prev]);
+    setDoc(doc(db, 'orders', order.orderId), order)
+      .catch(error => console.error('Failed to save order', error));
   };
 
   const updateOrderStatus = (orderId: string, status: 'pending_payment' | 'confirmed') => {
     setOrders(prev => prev.map(o => o.orderId === orderId ? { ...o, status } : o));
+    updateDoc(doc(db, 'orders', orderId), { status })
+      .catch(error => console.error('Failed to update order status', error));
   };
 
   const deleteOrder = (orderId: string) => {
     setOrders(prev => prev.filter(o => o.orderId !== orderId));
+    deleteDoc(doc(db, 'orders', orderId))
+      .catch(error => console.error('Failed to delete order', error));
   };
 
   const importProducts = (productsJson: string): boolean => {

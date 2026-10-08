@@ -252,6 +252,115 @@ textarea.input-field {
   color: var(--text-primary);
 }
 
+@media (max-width: 600px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 0.5rem;
+  }
+
+  .dashboard-modal {
+    max-height: calc(100vh - 1rem) !important;
+    padding: 1rem !important;
+    border-radius: var(--radius-md);
+  }
+
+  .dashboard-header {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.75rem !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.25rem !important;
+    line-height: 1.15;
+  }
+
+  .dashboard-header p {
+    margin: 0.35rem 0 0;
+    line-height: 1.4;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .dashboard-tabs {
+    overflow-x: auto;
+    margin: 0 -0.25rem 1rem !important;
+    padding: 0 0.25rem 0.5rem !important;
+    scrollbar-width: none;
+  }
+
+  .dashboard-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-tab {
+    flex: 0 0 auto;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem !important;
+    white-space: nowrap;
+  }
+
+  .dashboard-kpi-grid,
+  .dashboard-breakdown-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .dashboard-kpi-grid > div,
+  .dashboard-breakdown-grid > div {
+    padding: 1rem !important;
+  }
+
+  .dashboard-order-meta {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-order-footer {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .dashboard-order-actions {
+    width: 100%;
+  }
+
+  .dashboard-order-actions > * {
+    flex: 1;
+    justify-content: center;
+    min-height: 2.5rem;
+  }
+
+  .dashboard-inventory-header {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .dashboard-inventory-header > button {
+    justify-content: center;
+  }
+
+  .dashboard-inventory-item {
+    align-items: flex-start !important;
+    gap: 0.75rem;
+  }
+
+  .dashboard-inventory-item > div {
+    min-width: 0;
+  }
+
+  .dashboard-inventory-item > div > div:last-child {
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+}
+
 /* Slide Drawer */
 .drawer-overlay {
   position: fixed;

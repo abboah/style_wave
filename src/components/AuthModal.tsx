@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
-import { X, Lock, KeyRound, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, Lock, Mail, KeyRound, AlertCircle, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/useStore';
 
 export const AuthModal: React.FC = () => {
   const { isAuthModalOpen, setIsAuthModalOpen, loginOwner } = useStore();
-  const [passcode, setPasscode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
   if (!isAuthModalOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = loginOwner(passcode);
+    const success = await loginOwner(email, password);
     if (!success) {
       setError(true);
       setTimeout(() => setError(false), 2500);
     } else {
-      setPasscode('');
+      setEmail('');
+      setPassword('');
       setError(false);
     }
   };
@@ -44,19 +46,32 @@ export const AuthModal: React.FC = () => {
           CREATOR ACCESS
         </h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.75rem' }}>
-          Enter the creator passcode to manage closet drops, track visitor analytics, and view private sales.
+          Sign in with your creator account to manage closet drops, track visitor analytics, and view private sales.
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ position: 'relative' }}>
-            <KeyRound size={17} color="var(--text-muted)" style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <Mail size={17} color="var(--text-muted)" style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)' }} />
             <input 
-              type="password" 
+              type="email" 
               className="input-field"
-              placeholder="Enter Creator Passcode"
-              value={passcode}
-              onChange={(e) => { setPasscode(e.target.value); setError(false); }}
+              placeholder="Creator email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(false); }}
               autoFocus
+              style={{ paddingLeft: '2.5rem', textAlign: 'left' }}
+              required
+            />
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <KeyRound size={17} color="var(--text-muted)" style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="password"
+              className="input-field"
+              placeholder="Creator password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(false); }}
               style={{ paddingLeft: '2.5rem', textAlign: 'left' }}
               required
             />
@@ -65,7 +80,7 @@ export const AuthModal: React.FC = () => {
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', color: '#dc2626', fontSize: '0.8rem' }}>
               <AlertCircle size={15} />
-              <span>Incorrect passcode. Default is: <code>wave2026</code></span>
+              <span>Unable to sign in. Check your email and password.</span>
             </div>
           )}
 
@@ -79,7 +94,7 @@ export const AuthModal: React.FC = () => {
           </button>
 
           <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-            Passcode can be changed anytime in Store Settings.
+            Creator accounts are managed in Firebase Authentication.
           </span>
         </form>
 

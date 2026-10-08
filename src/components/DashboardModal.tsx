@@ -53,14 +53,14 @@ export const DashboardModal: React.FC = () => {
   return (
     <div className="modal-overlay" onClick={() => setIsDashboardOpen(false)}>
       <div 
-        className="modal-content" 
+        className="modal-content dashboard-modal" 
         onClick={(e) => e.stopPropagation()} 
         style={{ maxWidth: '920px', padding: '2rem', maxHeight: '90vh' }}
       >
         {/* Top Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-medium)', paddingBottom: '1.25rem', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="dashboard-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-medium)', paddingBottom: '1.25rem', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div className="dashboard-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <h2 className="font-brand" style={{ fontSize: '1.65rem', fontWeight: 900, color: '#090d16' }}>
                 CREATOR DASHBOARD
               </h2>
@@ -117,9 +117,10 @@ export const DashboardModal: React.FC = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-medium)', paddingBottom: '0.5rem' }}>
+        <div className="dashboard-tabs" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-medium)', paddingBottom: '0.5rem' }}>
           <button
             onClick={() => setActiveTab('overview')}
+            className="dashboard-tab"
             style={{
               padding: '0.5rem 1rem',
               background: activeTab === 'overview' ? '#090d16' : 'transparent',
@@ -135,6 +136,7 @@ export const DashboardModal: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('orders')}
+            className="dashboard-tab"
             style={{
               padding: '0.5rem 1rem',
               background: activeTab === 'orders' ? '#090d16' : 'transparent',
@@ -150,6 +152,7 @@ export const DashboardModal: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('inventory')}
+            className="dashboard-tab"
             style={{
               padding: '0.5rem 1rem',
               background: activeTab === 'inventory' ? '#090d16' : 'transparent',
@@ -170,7 +173,7 @@ export const DashboardModal: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
             
             {/* KPI Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+            <div className="dashboard-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
               
               {/* Revenue */}
               <div style={{ background: '#f8fafc', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
@@ -231,7 +234,7 @@ export const DashboardModal: React.FC = () => {
             </div>
 
             {/* Split Breakdown & Most Wanted Pieces */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            <div className="dashboard-breakdown-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
               
               {/* Catalog Split Card */}
               <div style={{ background: '#ffffff', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
@@ -352,7 +355,7 @@ export const DashboardModal: React.FC = () => {
                         </span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.82rem' }}>
+                      <div className="dashboard-order-meta" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.82rem' }}>
                         <div>
                           <strong>{order.customer.fullName}</strong>
                           <div style={{ color: '#0284c7' }}>📞 {order.customer.phone}</div>
@@ -363,12 +366,12 @@ export const DashboardModal: React.FC = () => {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-medium)', paddingTop: '0.6rem' }}>
+                      <div className="dashboard-order-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-medium)', paddingTop: '0.6rem' }}>
                         <span className="font-brand" style={{ fontWeight: 800, fontSize: '1.1rem', color: '#090d16' }}>
                           Total: {formatCurrency(order.total)}
                         </span>
 
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div className="dashboard-order-actions" style={{ display: 'flex', gap: '0.5rem' }}>
                           <a
                             href={`https://wa.me/${customerPhoneClean}?text=Hello%20${encodeURIComponent(order.customer.fullName)},%20this%20is%20${encodeURIComponent(merchantConfig.brandName)}!%20Confirming%20your%20order%20%23${order.orderId}...`}
                             target="_blank"
@@ -405,7 +408,7 @@ export const DashboardModal: React.FC = () => {
         {/* TAB 3: INVENTORY */}
         {activeTab === 'inventory' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="dashboard-inventory-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 Managing {products.length} live listings.
               </span>
@@ -423,7 +426,7 @@ export const DashboardModal: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '420px', overflowY: 'auto' }}>
               {products.map(p => (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: '#f8fafc', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}>
+                <div key={p.id} className="dashboard-inventory-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: '#f8fafc', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-sm)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <img src={p.images[0]} alt="" style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '4px' }} />
                     <div>

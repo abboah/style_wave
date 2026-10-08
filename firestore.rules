@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isCreator() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    function isAnonymousVisitor() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create, delete: if isCreator();
+      allow update: if isCreator()
+        || (isAnonymousVisitor()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['savesCount']));
+    }
+
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update, delete: if isCreator();
+    }
+
+    match /store/config {
+      allow read: if true;
+      allow write: if isCreator();
+    }
+
+    match /analytics/store {
+      allow read: if isCreator();
+      allow create: if isAnonymousVisitor()
+        && request.resource.data.keys().hasOnly(['totalVisits', 'uniqueVisitors', 'lastVisitDate']);
+      allow update: if isCreator()
+        || (isAnonymousVisitor()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['totalVisits', 'uniqueVisitors', 'lastVisitDate']));
+    }
+  }
+}

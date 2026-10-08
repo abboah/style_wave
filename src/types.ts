@@ -49,7 +49,6 @@ export interface MerchantConfig {
   yebeckMerchantId: string;
   phoneWhatsApp: string;
   instagram: string;
-  adminPasscode: string; // Passcode protecting Closet posting and Analytics dashboard
 }
 
 export interface OrderCustomerInfo {
@@ -78,4 +77,5 @@ export interface StoreAnalytics {
   totalVisits: number;
   uniqueVisitors: number;
   lastVisitDate: string;
+  activeVisitors?: number;
 }

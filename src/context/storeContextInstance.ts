@@ -56,7 +56,7 @@ export interface StoreContextType {
 
   // Creator Authentication
   isOwnerAuthenticated: boolean;
-  loginOwner: (passcode: string) => boolean;
+  loginOwner: (email: string, password: string) => Promise<boolean>;
   logoutOwner: () => void;
   openProtectedAction: (action: 'post' | 'dashboard') => void;
 
