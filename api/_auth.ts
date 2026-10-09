@@ -1,17 +1,20 @@
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-if (!projectId || !clientEmail || !privateKey) throw new Error('Firebase Admin credentials are not configured.');
-
-const app = getApps()[0] || initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
-export const adminAuth = getAuth(app);
+const firebaseWebApiKey = process.env.FIREBASE_WEB_API_KEY || 'AIzaSyB5sr0iHXn3n0uCiZz52BO9HYlnHrboB8g';
 
 export async function requireCreator(authorization?: string) {
   if (!authorization?.startsWith('Bearer ')) throw new Error('Authentication required.');
-  const token = await adminAuth.verifyIdToken(authorization.slice(7));
-  if (token.firebase?.sign_in_provider !== 'password') throw new Error('Creator authentication required.');
-  return token;
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseWebApiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken: authorization.slice(7) })
+  });
+  if (!response.ok) throw new Error('Creator authentication required.');
+
+  const data = await response.json() as {
+    users?: Array<{ providerUserInfo?: Array<{ providerId?: string }> }>;
+  };
+  const providers = data.users?.[0]?.providerUserInfo || [];
+  if (!providers.some(provider => provider.providerId === 'password')) {
+    throw new Error('Creator authentication required.');
+  }
+  return data.users?.[0];
 }
