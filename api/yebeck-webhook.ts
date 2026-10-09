@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { firestore } from './_firebase.js';
+import { ensureNeonSchema, sql } from './_neon.js';
 
 type Request = { method?: string; body?: unknown };
 type Response = { status: (code: number) => Response; json: (body: unknown) => void };
@@ -80,6 +80,7 @@ export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+  await ensureNeonSchema();
 
   const body = (req.body || {}) as WebhookBody;
   const reference = body.data?.reference || body.reference;
@@ -100,14 +101,11 @@ export default async function handler(req: Request, res: Response) {
     && body.data?.status === 'successful'
     && Number.isFinite(webhookAmount);
 
-  const matchingOrders = await firestore.collection('orders')
-    .where('yebeckReference', '==', reference)
-    .limit(1)
-    .get();
-  if (matchingOrders.empty) return res.status(202).json({ received: true });
+  const matchingOrders = await sql`SELECT order_id, data FROM orders WHERE data->>'yebeckReference' = ${reference} LIMIT 1`;
+  if (matchingOrders.length === 0) return res.status(202).json({ received: true });
 
-  const order = matchingOrders.docs[0];
-  const orderData = order.data() as { total?: number; status?: string };
+  const order = matchingOrders[0];
+  const orderData = order.data as { total?: number; status?: string };
   if (orderData.status === 'confirmed') return res.status(200).json({ received: true });
   const paymentIsVerified = paymentState === 'successful'
     && paymentReference === reference;
@@ -121,6 +119,6 @@ export default async function handler(req: Request, res: Response) {
     return res.status(400).json({ error: 'Payment amount mismatch.' });
   }
 
-  await order.ref.update({ status: 'confirmed' });
+  await sql`UPDATE orders SET data = data || '{"status":"confirmed"}'::jsonb, updated_at = NOW() WHERE order_id = ${order.order_id}`;
   return res.status(200).json({ received: true });
 }

@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import type { Product, PlacedOrder, OrderCustomerInfo } from '../src/types.js';
-import { firestore } from './_firebase.js';
+import { ensureNeonSchema, sql } from './_neon.js';
 
 type Request = {
   method?: string;
@@ -48,6 +48,7 @@ export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed.' });
   }
+  await ensureNeonSchema();
 
   if (!isPaymentRequest(req.body) || !isValidCustomer(req.body.customer)) {
     return res.status(400).json({ error: 'Invalid checkout details.' });
@@ -68,12 +69,8 @@ export default async function handler(req: Request, res: Response) {
   ))) {
     return res.status(400).json({ error: 'Invalid product selection.' });
   }
-  const productRefs = req.body.items.map(item => firestore.collection('products').doc(item.productId));
-  const productSnapshots = await firestore.getAll(...productRefs);
-  const products = new Map<string, Product | undefined>();
-  productSnapshots.forEach(snapshot => {
-    products.set(snapshot.id, snapshot.data() as Product | undefined);
-  });
+  const productRows = await sql`SELECT id, data FROM products WHERE id = ANY(${req.body.items.map(item => item.productId)})`;
+  const products = new Map(productRows.map(row => [row.id as string, row.data as Product]));
 
   const items = [];
   let subtotal = 0;
@@ -121,8 +118,7 @@ export default async function handler(req: Request, res: Response) {
     createdAt: new Date().toISOString()
   };
 
-  const orderRef = firestore.collection('orders').doc(orderId);
-  await orderRef.set(order);
+  await sql`INSERT INTO orders (order_id, data) VALUES (${orderId}, ${JSON.stringify(order)}::jsonb)`;
 
   try {
     const paymentResponse = await fetch(`${YEBECK_API_URL}/collections`, {
@@ -146,7 +142,7 @@ export default async function handler(req: Request, res: Response) {
     };
 
     if (!paymentResponse.ok || !paymentResult.success || !paymentResult.data?.reference) {
-      await orderRef.delete();
+      await sql`DELETE FROM orders WHERE order_id = ${orderId}`;
       return res.status(502).json({ error: paymentResult.message || 'Yebeck payment could not be started.' });
     }
 
@@ -154,10 +150,10 @@ export default async function handler(req: Request, res: Response) {
       ...order,
       yebeckReference: paymentResult.data.reference
     };
-    await orderRef.set(updatedOrder);
+    await sql`UPDATE orders SET data = ${JSON.stringify(updatedOrder)}::jsonb, updated_at = NOW() WHERE order_id = ${orderId}`;
     return res.status(201).json({ order: updatedOrder });
   } catch (error) {
-    await orderRef.delete();
+    await sql`DELETE FROM orders WHERE order_id = ${orderId}`;
     console.error('Yebeck payment initiation failed', error);
     return res.status(502).json({ error: 'Yebeck payment could not be started.' });
   }

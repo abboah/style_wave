@@ -44,6 +44,16 @@ https://your-vercel-domain.vercel.app/api/yebeck-webhook
 
 The webhook handler verifies the transaction with Yebeck's status API, matches the payment reference and amount to the order, and only then changes the order status to `confirmed`. Test keys resolve immediately; live keys may remain pending until the mobile-money provider confirms them.
 
+## Neon storage
+
+The application data layer uses Neon for products, store configuration, analytics, and orders. Firebase remains responsible only for creator authentication. Create a Neon database through the Vercel Neon integration, ensure `DATABASE_URL` is available to Production and Preview, and run the one-time migration from a trusted machine:
+
+```text
+node scripts/migrate-firestore-to-neon.mjs
+```
+
+The migration reads the existing Firestore collections and upserts them into Neon. Do not commit a service-account JSON file or place `DATABASE_URL` in frontend variables. After migration, publish the updated application and keep Firestore read-only until the Neon data is verified.
+
 ## Firestore collections
 
 - `products/{productId}`: public catalog, creator-managed

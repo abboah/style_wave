@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  setDoc,
-  updateDoc,
-  increment,
-  writeBatch
-} from 'firebase/firestore';
 import type { 
   Product, 
   CartItem, 
@@ -23,7 +11,8 @@ import type {
 } from '../types';
 import { INITIAL_PRODUCTS } from '../data/initialProducts';
 import { StoreContext } from './storeContextInstance';
-import { auth, db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
+import { getStoreSnapshot, storeAction } from '../lib/storeApi';
 
 const DEFAULT_CONFIG: MerchantConfig = {
   brandName: 'STYLE WAVE',
@@ -153,39 +142,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, []);
 
-  // Subscribe to shared store data. Local state remains as a fallback while Firebase loads.
+  // Load shared store data from Neon. Local state remains as a fallback while the API loads.
   useEffect(() => {
-    const unsubscribeProducts = onSnapshot(collection(db, 'products'), snapshot => {
-      if (!snapshot.empty) {
-        setProducts(snapshot.docs.map(item => item.data() as Product));
-      }
-    }, error => console.error('Failed to subscribe to products', error));
-    const unsubscribeConfig = onSnapshot(doc(db, 'store', 'config'), snapshot => {
-      if (snapshot.exists()) setMerchantConfig(prev => ({ ...prev, ...snapshot.data() } as MerchantConfig));
-    }, error => console.error('Failed to subscribe to store configuration', error));
-
-    return () => {
-      unsubscribeProducts();
-      unsubscribeConfig();
-    };
+    getStoreSnapshot().then(snapshot => {
+      if (snapshot.products.length > 0) setProducts(snapshot.products);
+      if (snapshot.config) setMerchantConfig(prev => ({ ...prev, ...snapshot.config }));
+      if (snapshot.analytics) setAnalytics(snapshot.analytics);
+    }).catch(error => console.error('Failed to load Neon store data', error));
   }, []);
 
   useEffect(() => {
     if (!isOwnerAuthenticated) return;
-
-    const unsubscribeOrders = onSnapshot(collection(db, 'orders'), snapshot => {
-      setOrders(snapshot.docs.map(item => item.data() as PlacedOrder).sort((a, b) =>
+    storeAction<{ orders: PlacedOrder[] }>('list-orders').then(result => {
+      setOrders(result.orders.sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       ));
-    }, error => console.error('Failed to subscribe to orders', error));
-    const unsubscribeAnalytics = onSnapshot(doc(db, 'analytics', 'store'), snapshot => {
-      if (snapshot.exists()) setAnalytics(snapshot.data() as StoreAnalytics);
-    }, error => console.error('Failed to subscribe to analytics', error));
-
-    return () => {
-      unsubscribeOrders();
-      unsubscribeAnalytics();
-    };
+    }).catch(error => console.error('Failed to load Neon orders', error));
   }, [isOwnerAuthenticated]);
 
   // Record live visit metrics through an anonymous Firebase session.
@@ -202,11 +174,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const isNewVisitor = !localStorage.getItem(uniqueVisitKey);
     if (isNewVisitor) localStorage.setItem(uniqueVisitKey, 'true');
 
-    setDoc(doc(db, 'analytics', 'store'), {
-        totalVisits: increment(1),
-        uniqueVisitors: increment(isNewVisitor ? 1 : 0),
-        lastVisitDate: new Date().toISOString()
-      }, { merge: true }).catch(error => {
+    storeAction('record-visit', { isNewVisitor }).catch(error => {
       sessionStorage.removeItem(sessionVisitKey);
       if (isNewVisitor) localStorage.removeItem(uniqueVisitKey);
       console.error('Failed to record visit analytics', error);
@@ -266,16 +234,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const loginOwner = async (email: string, password: string): Promise<boolean> => {
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      const productSnapshot = await getDocs(collection(db, 'products'));
-      if (productSnapshot.empty) {
-        const batch = writeBatch(db);
-        products.forEach(product => batch.set(doc(db, 'products', product.id), product));
-        await batch.commit();
-      }
-      const configSnapshot = await getDoc(doc(db, 'store', 'config'));
-      if (!configSnapshot.exists()) await setDoc(doc(db, 'store', 'config'), merchantConfig);
-      const analyticsSnapshot = await getDoc(doc(db, 'analytics', 'store'));
-      if (!analyticsSnapshot.exists()) await setDoc(doc(db, 'analytics', 'store'), analytics);
+      await storeAction('bootstrap', { products, config: merchantConfig });
       setIsAuthModalOpen(false);
       if (pendingProtectedAction === 'post') setIsPostModalOpen(true);
       if (pendingProtectedAction === 'dashboard') setIsDashboardOpen(true);
@@ -321,9 +280,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return p;
       }));
 
-      updateDoc(doc(db, 'products', productId), {
-        savesCount: increment(isSaved ? -1 : 1)
-      }).catch(error => console.error('Failed to sync wishlist count', error));
+      const product = products.find(item => item.id === productId);
+      if (product) {
+        storeAction('upsert-product', {
+          product: { ...product, savesCount: isSaved ? Math.max(0, (product.savesCount || 0) - 1) : (product.savesCount || 0) + 1 }
+        }).catch(error => console.error('Failed to sync wishlist count', error));
+      }
 
       return next;
     });
@@ -342,42 +304,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdAt: new Date().toISOString()
     };
     setProducts(prev => [product, ...prev]);
-    setDoc(doc(db, 'products', product.id), product)
-      .catch(error => console.error('Failed to save product', error));
+    storeAction('upsert-product', { product }).catch(error => console.error('Failed to save product', error));
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-    updateDoc(doc(db, 'products', id), updates)
+    const product = products.find(item => item.id === id);
+    if (product) storeAction('upsert-product', { product: { ...product, ...updates } })
       .catch(error => console.error('Failed to update product', error));
   };
 
   const deleteProduct = (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
     setCart(prev => prev.filter(item => item.product.id !== id));
-    deleteDoc(doc(db, 'products', id))
-      .catch(error => console.error('Failed to delete product', error));
+    storeAction('delete-product', { id }).catch(error => console.error('Failed to delete product', error));
   };
 
   const toggleSoldOut = (id: string) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, isSoldOut: !p.isSoldOut } : p));
     const product = products.find(item => item.id === id);
     if (product) {
-      updateDoc(doc(db, 'products', id), { isSoldOut: !product.isSoldOut })
+      storeAction('upsert-product', { product: { ...product, isSoldOut: !product.isSoldOut } })
         .catch(error => console.error('Failed to update product availability', error));
     }
   };
 
   const resetProducts = () => {
     setProducts(INITIAL_PRODUCTS);
-    const batch = writeBatch(db);
-    INITIAL_PRODUCTS.forEach(product => batch.set(doc(db, 'products', product.id), product));
-    batch.commit().catch(error => console.error('Failed to reset products', error));
+    INITIAL_PRODUCTS.forEach(product => {
+      storeAction('upsert-product', { product }).catch(error => console.error('Failed to reset product', error));
+    });
   };
 
   const updateMerchantConfig = (config: Partial<MerchantConfig>) => {
     setMerchantConfig(prev => ({ ...prev, ...config }));
-    setDoc(doc(db, 'store', 'config'), config, { merge: true })
+    storeAction('update-config', { config })
       .catch(error => console.error('Failed to save store configuration', error));
   };
 
@@ -387,13 +348,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateOrderStatus = (orderId: string, status: 'pending_payment' | 'confirmed') => {
     setOrders(prev => prev.map(o => o.orderId === orderId ? { ...o, status } : o));
-    updateDoc(doc(db, 'orders', orderId), { status })
+    storeAction('update-order', { orderId, updates: { status } })
       .catch(error => console.error('Failed to update order status', error));
   };
 
   const deleteOrder = (orderId: string) => {
     setOrders(prev => prev.filter(o => o.orderId !== orderId));
-    deleteDoc(doc(db, 'orders', orderId))
+    storeAction('delete-order', { orderId })
       .catch(error => console.error('Failed to delete order', error));
   };
 
