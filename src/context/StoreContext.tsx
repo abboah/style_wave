@@ -383,8 +383,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addOrder = (order: PlacedOrder) => {
     setOrders(prev => [order, ...prev]);
-    setDoc(doc(db, 'orders', order.orderId), order)
-      .catch(error => console.error('Failed to save order', error));
   };
 
   const updateOrderStatus = (orderId: string, status: 'pending_payment' | 'confirmed') => {

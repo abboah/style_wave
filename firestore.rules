@@ -21,7 +21,9 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow create: if true;
+      // Orders are created and confirmed by the trusted Vercel API using
+      // the Firebase Admin SDK, which bypasses client Firestore rules.
+      allow create: if false;
       allow read, update, delete: if isCreator();
     }
 

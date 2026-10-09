@@ -23,9 +23,30 @@ VITE_FIREBASE_APP_ID=...
 
 The first successful creator sign-in migrates the bundled products, store configuration, and analytics defaults into Firestore when those collections are empty.
 
+## Vercel payment API
+
+Checkout requests are sent to the Vercel functions in [`api/`](../api/). The browser sends product IDs, quantities, delivery details, and the mobile-money network; the server reads current product prices from Firestore and creates the order. The server then starts a Yebeck collection with the secret API key.
+
+Configure these variables in Vercel Project Settings → Environment Variables:
+
+```text
+FIREBASE_PROJECT_ID=...
+FIREBASE_CLIENT_EMAIL=...
+FIREBASE_PRIVATE_KEY=...
+YEBECK_API_KEY=ybk_test_... # use ybk_live_... only for production
+```
+
+Never expose `YEBECK_API_KEY` through a `VITE_` variable, the browser bundle, Firestore, local storage, or a URL. Configure the Yebeck webhook endpoint as:
+
+```text
+https://your-vercel-domain.vercel.app/api/yebeck-webhook
+```
+
+The webhook handler verifies the transaction with Yebeck's status API, matches the payment reference and amount to the order, and only then changes the order status to `confirmed`. Test keys resolve immediately; live keys may remain pending until the mobile-money provider confirms them.
+
 ## Firestore collections
 
 - `products/{productId}`: public catalog, creator-managed
-- `orders/{orderId}`: checkout orders and creator status updates
+- `orders/{orderId}`: checkout orders created by the trusted Vercel API and creator status updates
 - `store/config`: public store and Yebeck configuration
 - `analytics/store`: creator analytics counters

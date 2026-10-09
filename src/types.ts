@@ -69,6 +69,8 @@ export interface PlacedOrder {
   total: number;
   customer: OrderCustomerInfo;
   paymentMethod: 'yebeck';
+  paymentNetwork: 'mtn' | 'telecel' | 'at';
+  yebeckReference?: string;
   status: 'pending_payment' | 'confirmed';
   createdAt: string;
 }

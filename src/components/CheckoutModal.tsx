@@ -29,8 +29,11 @@ export const CheckoutModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [network, setNetwork] = useState<'mtn' | 'telecel' | 'at'>('mtn');
   const [deliveryMethod, setDeliveryMethod] = useState<'standard' | 'express'>('standard');
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
 
   // Post-submission state
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
@@ -41,7 +44,7 @@ export const CheckoutModal: React.FC = () => {
   const deliveryFee = deliveryMethod === 'standard' ? 35 : 60;
   const grandTotal = cartTotal + deliveryFee;
 
-  const handlePayOnYebeck = (e: React.FormEvent) => {
+  const handlePayOnYebeck = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!fullName.trim() || !phone.trim() || !address.trim() || !city.trim()) {
@@ -49,39 +52,45 @@ export const CheckoutModal: React.FC = () => {
       return;
     }
 
-    const orderId = `SW-GH-${Math.floor(100000 + Math.random() * 900000)}`;
+    setIsSubmitting(true);
+    setPaymentError('');
 
-    const newOrder: PlacedOrder = {
-      orderId,
-      items: [...cart],
-      subtotal: cartTotal,
-      deliveryFee,
-      total: grandTotal,
-      customer: {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-        address: address.trim(),
-        city: city.trim(),
-        region: 'Ghana',
-        notes: notes.trim()
-      },
-      paymentMethod: 'yebeck',
-      status: 'pending_payment',
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const response = await fetch('/api/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(item => ({
+            productId: item.product.id,
+            selectedSize: item.selectedSize,
+            quantity: item.quantity
+          })),
+          customer: {
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            email: email.trim(),
+            address: address.trim(),
+            city: city.trim(),
+            region: 'Ghana',
+            notes: notes.trim()
+          },
+          deliveryMethod,
+          network
+        })
+      });
+      const result = await response.json() as { order?: PlacedOrder; error?: string };
+      if (!response.ok || !result.order) {
+        throw new Error(result.error || 'Unable to start payment.');
+      }
 
-    addOrder(newOrder);
-    setPlacedOrder(newOrder);
-    clearCart();
-
-    // Construct Yebeck payment link
-    let targetUrl = merchantConfig.yebeckUrl || 'https://yebeck.com';
-    const separator = targetUrl.includes('?') ? '&' : '?';
-    const paymentUrl = `${targetUrl}${separator}merchant=${encodeURIComponent(merchantConfig.yebeckMerchantId)}&orderId=${orderId}&amount=${grandTotal}&currency=GHS`;
-
-    // Open Yebeck in a new window
-    window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+      addOrder(result.order);
+      setPlacedOrder(result.order);
+      clearCart();
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : 'Unable to start payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleWhatsAppNotify = () => {
@@ -141,11 +150,11 @@ export const CheckoutModal: React.FC = () => {
             </div>
 
             <h3 className="font-brand" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#090d16', marginBottom: '0.4rem' }}>
-              Order Generated & Sent to Yebeck!
+              Payment Request Sent to Yebeck!
             </h3>
             
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '460px', margin: '0 auto 1.5rem', lineHeight: 1.5 }}>
-              A new tab has opened to complete payment on <strong>yebeck.com</strong>. Save your order reference below.
+              A payment request was sent to the selected mobile-money number. Approve it on your phone, then save your order reference below.
             </p>
 
             {/* Order Reference Card */}
@@ -301,6 +310,22 @@ export const CheckoutModal: React.FC = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                  Mobile Money Network *
+                </label>
+                <select
+                  className="input-field"
+                  value={network}
+                  onChange={(e) => setNetwork(e.target.value as 'mtn' | 'telecel' | 'at')}
+                  required
+                >
+                  <option value="mtn">MTN MoMo</option>
+                  <option value="telecel">Telecel Cash</option>
+                  <option value="at">AT Money</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
                   Street / Area / Delivery Address *
                 </label>
                 <input 
@@ -342,6 +367,12 @@ export const CheckoutModal: React.FC = () => {
               </div>
             </div>
 
+            {paymentError && (
+              <div role="alert" style={{ color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', padding: '0.75rem', fontSize: '0.82rem' }}>
+                {paymentError}
+              </div>
+            )}
+
             {/* Order Items Summary */}
             <div style={{ background: '#f8fafc', borderRadius: 'var(--radius-md)', padding: '1rem', border: '1px solid var(--border-medium)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
@@ -380,9 +411,10 @@ export const CheckoutModal: React.FC = () => {
               <button 
                 type="submit"
                 className="btn btn-primary btn-lg"
+                disabled={isSubmitting}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
               >
-                <span>Proceed to Pay on Yebeck.com</span>
+                <span>{isSubmitting ? 'Starting secure payment...' : 'Proceed to Pay on Yebeck.com'}</span>
                 <ExternalLink size={16} />
               </button>
             </div>
