@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
-import type { Product, PlacedOrder, OrderCustomerInfo } from '../src/types';
-import { firestore } from './_firebase';
+/// <reference types="node" />
+import type { Product, PlacedOrder, OrderCustomerInfo } from '../src/types.js';
+import { firestore } from './_firebase.js';
 
 type Request = {
   method?: string;
@@ -59,7 +59,7 @@ export default async function handler(req: Request, res: Response) {
     return res.status(500).json({ error: 'Payments are temporarily unavailable.' });
   }
 
-  const orderId = `SW-GH-${randomUUID().slice(0, 8).toUpperCase()}`;
+  const orderId = `SW-GH-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   if (req.body.items.some(item => (
     typeof item.productId !== 'string'
     || !item.productId
@@ -70,7 +70,10 @@ export default async function handler(req: Request, res: Response) {
   }
   const productRefs = req.body.items.map(item => firestore.collection('products').doc(item.productId));
   const productSnapshots = await firestore.getAll(...productRefs);
-  const products = new Map(productSnapshots.map(snapshot => [snapshot.id, snapshot.data() as Product | undefined]));
+  const products = new Map<string, Product | undefined>();
+  productSnapshots.forEach(snapshot => {
+    products.set(snapshot.id, snapshot.data() as Product | undefined);
+  });
 
   const items = [];
   let subtotal = 0;
